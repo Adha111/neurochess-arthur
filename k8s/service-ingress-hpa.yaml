@@ -1,0 +1,82 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: neuro-chess-service
+  namespace: neuro-chess
+  labels:
+    app: neuro-chess
+spec:
+  type: LoadBalancer
+  selector:
+    app: neuro-chess
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8000
+      nodePort: 30080
+      protocol: TCP
+  sessionAffinity: ClientIP
+  sessionAffinityConfig:
+    clientIP:
+      timeoutSeconds: 10800
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: neuro-chess-ingress
+  namespace: neuro-chess
+  annotations:
+    nginx.ingress.kubernetes.io/affinity: "cookie"
+    nginx.ingress.kubernetes.io/session-cookie-name: "neurochess_route"
+    nginx.ingress.kubernetes.io/session-cookie-max-age: "172800"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "120"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: neurochess.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: neuro-chess-service
+                port:
+                  number: 8080
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: neuro-chess-hpa
+  namespace: neuro-chess
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: neuro-chess-deployment
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: neuro-chess-pdb
+  namespace: neuro-chess
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: neuro-chess

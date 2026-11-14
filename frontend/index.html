@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NeuroChess AI — Autonomous Neural Chess Engine & K8s Platform</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <!-- Top Navigation & Status Bar -->
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-logo">
+        <svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="18" cy="18" r="16" stroke="url(#grad1)" stroke-width="2.5"/>
+          <path d="M12 26H24L22 21L24 14L19 16L18 10L17 16L12 14L14 21L12 26Z" fill="url(#grad1)"/>
+          <defs>
+            <linearGradient id="grad1" x1="0" y1="0" x2="36" y2="36" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#38bdf8"/>
+              <stop offset="1" stop-color="#818cf8"/>
+            </linearGradient>
+          </defs>
+        </svg>
+      </div>
+      <div>
+        <h1>NeuroChess <span class="badge-accent">PYTORCH + NNUE v3</span></h1>
+        <p class="subtitle">Stockfish SFNNv9 HalfKAv2_hm • Lc0 SE-ResNet Transformer • PVS + MCTS</p>
+      </div>
+    </div>
+
+    <div class="topbar-controls">
+      <div class="k8s-indicator" title="Kubernetes Ready Microservice">
+        <span class="pulse-dot"></span>
+        <span>K8s Pod: <strong>Ready</strong></span>
+      </div>
+      <button id="btn-heatmap" class="btn btn-secondary" title="Mostrar/Ocultar Mapa de Atención Espacial de la Red Neuronal">
+        🔥 Mapa de Atención IA: <span id="heatmap-state">ON</span>
+      </button>
+      <button id="btn-sound" class="btn btn-secondary" title="Efectos de sonido sintetizados">
+        🔊 Sonido: <span id="sound-state">ON</span>
+      </button>
+      <button id="btn-flip" class="btn btn-secondary">
+        🔄 Girar Tablero
+      </button>
+    </div>
+  </header>
+
+  <!-- Main 3-Column Dashboard -->
+  <main class="dashboard">
+    <!-- Left Column: Neural Agent Configuration & Autonomous Modes -->
+    <section class="panel panel-left">
+      <div class="panel-header">
+        <h2>🧠 Configuración del Agente Neuronal</h2>
+        <span class="tag-pill" id="active-model-pill">AlphaZero MCTS</span>
+      </div>
+
+      <div class="control-group">
+        <label for="select-learning-model">Arquitectura / Modelo de Aprendizaje (PyTorch)</label>
+        <select id="select-learning-model" class="input-select">
+          <option value="alphazero_mcts">Lc0 SE-ResNet + Transformer MCTS (4096 Attention)</option>
+          <option value="minimax_nnue">Stockfish NNUE SFNNv9 (HalfKAv2_hm + PVS/Quiescence)</option>
+          <option value="dqn_td_rl">Dueling Double-DQN + A2C (Prioritized Replay RL)</option>
+          <option value="evolutionary_ga">Neuro-Evolutionary Swarm (4 Genomas PyTorch)</option>
+        </select>
+        <p id="model-desc" class="help-text">
+          Red Convolucional Squeeze-and-Excitation + Transformer Multi-Cabeza (estilo Leela Chess Zero BT4) combinada con búsqueda Monte Carlo PUCT y cabezal WDL/MLH.
+        </p>
+      </div>
+
+      <div class="control-group">
+        <label for="select-reaction-profile">Modelo de Reacción / Personalidad IA</label>
+        <select id="select-reaction-profile" class="input-select">
+          <option value="tactical">⚡ Táctico (Cálculo Profundo - Kasparov)</option>
+          <option value="aggressive">🔥 Agresivo (Tal Berserker - Sacrificios y Ataque)</option>
+          <option value="positional">🏛️ Posicional (Maestro Estratégico - Control Central)</option>
+          <option value="adaptive">🦎 Adaptativo (Camaleón Neuronal Dinámico)</option>
+          <option value="defensive">🛡️ Defensivo (Muralla de Hierro - Contraataque)</option>
+        </select>
+        <p id="reaction-desc" class="help-text">
+          Prioriza combinaciones forzadas, horquillas, clavadas y ganancia material exacta.
+        </p>
+      </div>
+
+      <div class="control-row">
+        <div class="control-group half">
+          <label for="select-player-color">Tu Color</label>
+          <select id="select-player-color" class="input-select">
+            <option value="w">♔ Blancas (Inicias)</option>
+            <option value="b">♚ Negras (IA Inicia)</option>
+          </select>
+        </div>
+        <div class="control-group half">
+          <label for="select-difficulty">Profundidad / Simulaciones</label>
+          <select id="select-difficulty" class="input-select">
+            <option value="1">Nivel 1 (Rápido)</option>
+            <option value="2">Nivel 2 (Estándar)</option>
+            <option value="3" selected>Nivel 3 (Gran Maestro IA)</option>
+            <option value="4">Nivel 4 (Máximo Cálculo)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="action-buttons">
+        <button id="btn-new-game" class="btn btn-primary">
+          ♟️ Nueva Partida vs IA
+        </button>
+        <button id="btn-ai-move" class="btn btn-accent" title="Forzar que el Agente Neuronal realice la siguiente jugada">
+          🤖 Jugada Autónoma IA Ahora
+        </button>
+        <button id="btn-self-play" class="btn btn-outline">
+          ⚔️ Modo Duelo Autónomo (IA vs IA)
+        </button>
+      </div>
+
+      <hr class="divider" />
+
+      <!-- Live Reinforcement Learning Training Box -->
+      <div class="training-card">
+        <div class="training-header">
+          <div>
+            <h3>⚡ Entrenamiento Neuronal en Vivo</h3>
+            <p class="help-text">Ejecuta épocas de Auto-Juego (TD-Lambda Backprop) en los pesos de la red activa.</p>
+          </div>
+          <span class="epoch-badge">Época #<span id="stat-epochs">72</span></span>
+        </div>
+
+        <div class="training-metrics">
+          <div class="metric-box">
+            <span class="metric-label">Loss Sináptico (TD)</span>
+            <span class="metric-value" id="stat-loss">0.0142</span>
+          </div>
+          <div class="metric-box">
+            <span class="metric-label">Nodos Evaluados</span>
+            <span class="metric-value" id="stat-nodes">0</span>
+          </div>
+          <div class="metric-box">
+            <span class="metric-label">Tiempo IA</span>
+            <span class="metric-value" id="stat-time">0 ms</span>
+          </div>
+        </div>
+
+        <button id="btn-train-net" class="btn btn-train">
+          🧬 Entrenar Red (+30 Épocas RL Self-Play)
+        </button>
+      </div>
+    </section>
+
+    <!-- Center Column: Interactive Chessboard + Evaluation Bar -->
+    <section class="panel panel-center">
+      <!-- Game Status Banner -->
+      <div class="status-banner" id="status-banner">
+        <div class="turn-indicator">
+          <span class="turn-dot white" id="turn-dot"></span>
+          <span id="status-text">Turno de las Blancas — Tu turno</span>
+        </div>
+        <div class="thinking-badge hidden" id="thinking-badge">
+          <span class="spinner"></span>
+          <span>Red Neuronal calculando...</span>
+        </div>
+      </div>
+
+      <!-- Board + Eval Bar Wrapper -->
+      <div class="board-arena">
+        <!-- Vertical Evaluation Bar -->
+        <div class="eval-bar-container" title="Estimación del Cabezal de Valor (Value Head) de la Red Neuronal">
+          <div class="eval-bar-black" id="eval-bar-black" style="height: 50%;"></div>
+          <div class="eval-bar-white" id="eval-bar-white" style="height: 50%;"></div>
+          <span class="eval-score-label" id="eval-score-label">50%</span>
+        </div>
+
+        <!-- Chessboard Grid -->
+        <div class="board-wrapper">
+          <div id="chessboard" class="chessboard"></div>
+        </div>
+      </div>
+
+      <!-- Captured Pieces & FEN Bar -->
+      <div class="board-footer">
+        <div class="captured-row">
+          <span class="cap-label">Capturas Blancas:</span>
+          <div id="captured-by-white" class="captured-icons"></div>
+        </div>
+        <div class="captured-row">
+          <span class="cap-label">Capturas Negras:</span>
+          <div id="captured-by-black" class="captured-icons"></div>
+        </div>
+      </div>
+      <div class="fen-bar">
+        <span class="fen-tag">FEN</span>
+        <input type="text" id="fen-input" readonly value="" />
+      </div>
+    </section>
+
+    <!-- Right Column: Real-Time Neural Network Visualizer, Candidate Probabilities & Move Log -->
+    <section class="panel panel-right">
+      <div class="panel-header">
+        <h2>🔬 Telemetría de Red Neuronal en Vivo</h2>
+        <span class="tag-pill tag-green" id="value-head-badge">Valor: +0.00</span>
+      </div>
+
+      <!-- Live Neural Network SVG / Canvas Topology -->
+      <div class="nn-visualizer-box">
+        <div class="nn-layer-titles">
+          <span>Entrada (160)</span>
+          <span>SE-Res / HalfKA</span>
+          <span>Attn / Stack</span>
+          <span>WDL Head</span>
+          <span>Eval</span>
+        </div>
+        <canvas id="nn-canvas" width="420" height="175"></canvas>
+      </div>
+
+      <!-- WDL Probability & Search Telemetry Strip -->
+      <div class="wdl-card">
+        <div class="wdl-header">
+          <span>WDL Prob (Ganar / Tablas / Perder)</span>
+          <span class="mono-dim" id="model-params-label">0 params • Depth 0</span>
+        </div>
+        <div class="wdl-bar">
+          <div class="wdl-win" id="wdl-win" style="width: 34%;">34%</div>
+          <div class="wdl-draw" id="wdl-draw" style="width: 32%;">32%</div>
+          <div class="wdl-loss" id="wdl-loss" style="width: 34%;">34%</div>
+        </div>
+        <div class="pv-row">
+          <span class="pv-tag">PV</span>
+          <span class="pv-line" id="pv-line-text">—</span>
+        </div>
+      </div>
+
+      <!-- Top Candidate Moves from Policy + Search -->
+      <div class="candidates-section">
+        <h3>🎯 Candidatos del Cabezal de Política (Policy Head)</h3>
+        <div id="candidates-list" class="candidates-list">
+          <div class="empty-hint">Realiza un movimiento para observar la distribución de probabilidad de la IA.</div>
+        </div>
+      </div>
+
+      <!-- Neural Reasoning Log -->
+      <div class="reasoning-section">
+        <h3>💡 Razonamiento Autónomo del Agente</h3>
+        <ul id="reasoning-list" class="reasoning-list">
+          <li>Red Neuronal inicializada con pesos estratégicos pre-entrenados.</li>
+        </ul>
+      </div>
+
+      <!-- Algebraic Move History (SAN) -->
+      <div class="history-section">
+        <h3>📜 Historial de Movimientos (SAN)</h3>
+        <div id="move-history" class="move-history"></div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Pawn Promotion Modal -->
+  <div id="promotion-modal" class="modal hidden">
+    <div class="modal-card">
+      <h3>Coronación de Peón</h3>
+      <p>Selecciona la pieza para coronar:</p>
+      <div class="promotion-options">
+        <button data-prom="q" class="prom-btn">♕<span>Dama</span></button>
+        <button data-prom="r" class="prom-btn">♖<span>Torre</span></button>
+        <button data-prom="b" class="prom-btn">♗<span>Alfil</span></button>
+        <button data-prom="n" class="prom-btn">♘<span>Caballo</span></button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

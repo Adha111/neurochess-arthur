@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: neuro-chess
+  labels:
+    app.kubernetes.io/name: neuro-chess
+    app.kubernetes.io/part-of: autonomous-ai-gaming
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: neuro-chess-config
+  namespace: neuro-chess
+data:
+  DEFAULT_LEARNING_MODEL: "alphazero_mcts"
+  DEFAULT_REACTION_PROFILE: "tactical"
+  TORCH_NUM_THREADS: "2"
+  NEUROCHESS_WEIGHTS_DIR: "/app/backend/weights"
+  LOG_LEVEL: "info"
+  WORKERS: "2"
